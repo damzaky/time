@@ -1,0 +1,11 @@
+name: Build & Deploy with GA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: damzaky/workflows/.github/workflows/inject-ga.yml@main
+    
