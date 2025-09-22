@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stopwatch with Alarms</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #time { font-size: 2em; margin-bottom: 10px; }
+    button { margin: 5px; }
+    .alarm-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+    .alarm-item span {
+      flex: 1;
+    }
+  </style>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-MHQZ4X0HZQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag("js", new Date());
+  gtag("config", "G-MHQZ4X0HZQ");
+</script>
+<link rel="stylesheet" href="https://damzaky.github.io/css/main.css">
+</head>
+<body>
+<a id="homepage-logo" href="https://damzaky.github.io/">Damzaky</a>
+  <h2>Stopwatch with Alarms</h2>
+  <div id="time">00:00.000</div>
+  <button id="startBtn">Start</button>
+  <button id="stopBtn">Stop</button>
+  <button id="resetBtn">Reset</button>
+  <button id="wakeLockBtn">Keep Screen On: OFF</button>
+  
+  <h3>Add Alarm (MM:SS)</h3>
+  <input type="number" id="minInput" min="0" placeholder="Min" style="width:60px;">
+  <input type="number" id="secInput" min="0" max="59" placeholder="Sec" style="width:60px;">
+  <button id="addAlarmBtn">Add Alarm</button>
+
+  <h3>Alarms</h3>
+  <div id="alarms"></div>
+
+  <audio id="beep" preload="auto">
+    <source src="./alarm.mp3" type="audio/ogg">
+  </audio>
+
+  <script>
+    let startTime = null;
+    let elapsed = 0;
+    let timer = null;
+
+    const timeDisplay = document.getElementById("time");
+    const beep = document.getElementById("beep");
+    const alarmsContainer = document.getElementById("alarms");
+
+    function updateTime() {
+      const now = Date.now();
+      const total = elapsed + (now - startTime);
+      const totalSeconds = Math.floor(total / 1000);
+      const min = Math.floor(totalSeconds / 60);
+      const sec = totalSeconds % 60;
+      const ms = total % 1000;
+      timeDisplay.textContent = 
+        `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+      checkAlarms(min, sec);
+    }
+
+    document.getElementById("startBtn").onclick = () => {
+      if (!timer) {
+        startTime = Date.now();
+        timer = setInterval(updateTime, 50);
+      }
+    };
+
+    document.getElementById("stopBtn").onclick = () => {
+      if (timer) {
+        elapsed += Date.now() - startTime;
+        clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    document.getElementById("resetBtn").onclick = () => {
+      clearInterval(timer);
+      timer = null;
+      startTime = null;
+      elapsed = 0;
+      timeDisplay.textContent = "00:00.000";
+    };
+
+    function addAlarm(min, sec) {
+      const alarms = getAlarms();
+      alarms.push({min, sec});
+      localStorage.setItem("stopwatchAlarms", JSON.stringify(alarms));
+      renderAlarms();
+    }
+
+    function removeAlarm(index) {
+      const alarms = getAlarms();
+      alarms.splice(index, 1);
+      localStorage.setItem("stopwatchAlarms", JSON.stringify(alarms));
+      renderAlarms();
+    }
+
+    function getAlarms() {
+      return JSON.parse(localStorage.getItem("stopwatchAlarms") || "[]");
+    }
+
+    function renderAlarms() {
+      alarmsContainer.innerHTML = "";
+      getAlarms().forEach((a, i) => {
+        const div = document.createElement("div");
+        div.className = "alarm-item";
+        div.innerHTML = `<span>${String(a.min).padStart(2,'0')}:${String(a.sec).padStart(2,'0')}</span>`;
+        const btn = document.createElement("button");
+        btn.textContent = "Remove";
+        btn.onclick = () => removeAlarm(i);
+        div.appendChild(btn);
+        alarmsContainer.appendChild(div);
+      });
+    }
+
+    function checkAlarms(min, sec) {
+      getAlarms().forEach(a => {
+        if (a.min === min && a.sec === sec) {
+          triggerAlarm();
+        }
+      });
+    }
+
+    function triggerAlarm() {
+      beep.currentTime = 0;
+      beep.play();
+      if (navigator.vibrate) {
+        navigator.vibrate([300, 150, 300]);
+      }
+    }
+
+    document.getElementById("addAlarmBtn").onclick = () => {
+      const min = parseInt(document.getElementById("minInput").value || "0", 10);
+      const sec = parseInt(document.getElementById("secInput").value || "0", 10);
+      if (min >= 0 && sec >= 0 && sec < 60) {
+        addAlarm(min, sec);
+      }
+    };
+
+    renderAlarms();
+
+    let wakeLock = null;
+    const wakeLockBtn = document.getElementById("wakeLockBtn");
+
+    async function requestWakeLock() {
+      try {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLockBtn.textContent = "Keep Screen On: ON";
+        wakeLock.addEventListener("release", () => {
+          wakeLock = null;
+          wakeLockBtn.textContent = "Keep Screen On: OFF";
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Wake Lock failed: " + err.message);
+      }
+    }
+
+    async function toggleWakeLock() {
+      if (!("wakeLock" in navigator)) {
+        alert("Wake Lock API not supported on this device/browser.");
+        return;
+      }
+      if (wakeLock) {
+        await wakeLock.release();
+        wakeLock = null;
+        wakeLockBtn.textContent = "Keep Screen On: OFF";
+      } else {
+        await requestWakeLock();
+      }
+    }
+
+    // Reacquire wake lock when returning to the page
+    document.addEventListener("visibilitychange", () => {
+      if (wakeLock !== null && document.visibilityState === "visible") {
+        requestWakeLock();
+      }
+    });
+
+    wakeLockBtn.onclick = toggleWakeLock;
+  </script>
+</body>
+</html>
