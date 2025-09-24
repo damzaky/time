@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Stopwatch with Alarms</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
+    body { font-family: sans-serif; padding: 20px; background: black; color: white; }
     #time { font-size: 2em; margin-bottom: 10px; }
     button { margin: 5px; }
     .alarm-item {
@@ -125,7 +125,7 @@
       beep.currentTime = 0;
       beep.play();
       if (navigator.vibrate) {
-        navigator.vibrate([300, 150, 300]);
+        navigator.vibrate([500, 100, 500]);
       }
     }
 
