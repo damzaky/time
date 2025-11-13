@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Stopwatch with Alarms</title>
+  <title>Stopwatch with Alarms + Picture-in-Picture</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body { font-family: sans-serif; padding: 20px; background: black; color: white; }
@@ -13,9 +13,7 @@
       align-items: center;
       margin: 5px 0;
     }
-    .alarm-item span {
-      flex: 1;
-    }
+    .alarm-item span { flex: 1; }
   </style>
 </head>
 <body>
@@ -25,6 +23,7 @@
   <button id="stopBtn">Stop</button>
   <button id="resetBtn">Reset</button>
   <button id="wakeLockBtn">Keep Screen On: OFF</button>
+  <button id="pipBtn">Show Picture in Picture</button>
   
   <h3>Add Alarm (MM:SS)</h3>
   <input type="number" id="minInput" min="0" placeholder="Min" style="width:60px;">
@@ -38,6 +37,10 @@
     <source src="./alarm.mp3" type="audio/ogg">
   </audio>
 
+  <!-- Hidden canvas and video for PiP -->
+  <canvas id="pipCanvas" width="400" height="150" style="display:none;"></canvas>
+  <video id="pipVideo" style="display:none;" muted playsinline></video>
+
   <script>
     let startTime = null;
     let elapsed = 0;
@@ -47,6 +50,7 @@
     const beep = document.getElementById("beep");
     const alarmsContainer = document.getElementById("alarms");
 
+    // --- Stopwatch core logic ---
     function updateTime() {
       const now = Date.now();
       const total = elapsed + (now - startTime);
@@ -54,9 +58,10 @@
       const min = Math.floor(totalSeconds / 60);
       const sec = totalSeconds % 60;
       const ms = total % 1000;
-      timeDisplay.textContent = 
-        `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+      const text = `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+      timeDisplay.textContent = text;
       checkAlarms(min, sec);
+      drawPiPFrame(text);
     }
 
     document.getElementById("startBtn").onclick = () => {
@@ -80,8 +85,10 @@
       startTime = null;
       elapsed = 0;
       timeDisplay.textContent = "00:00.000";
+      drawPiPFrame("00:00.000");
     };
 
+    // --- Alarm system ---
     function addAlarm(min, sec) {
       const alarms = getAlarms();
       alarms.push({min, sec});
@@ -125,21 +132,18 @@
     function triggerAlarm() {
       beep.currentTime = 0;
       beep.play();
-      if (navigator.vibrate) {
-        navigator.vibrate([500, 100, 500]);
-      }
+      if (navigator.vibrate) navigator.vibrate([500, 100, 500]);
     }
 
     document.getElementById("addAlarmBtn").onclick = () => {
       const min = parseInt(document.getElementById("minInput").value || "0", 10);
       const sec = parseInt(document.getElementById("secInput").value || "0", 10);
-      if (min >= 0 && sec >= 0 && sec < 60) {
-        addAlarm(min, sec);
-      }
+      if (min >= 0 && sec >= 0 && sec < 60) addAlarm(min, sec);
     };
 
     renderAlarms();
 
+    // --- Wake Lock ---
     let wakeLock = null;
     const wakeLockBtn = document.getElementById("wakeLockBtn");
 
@@ -171,7 +175,6 @@
       }
     }
 
-    // Reacquire wake lock when returning to the page
     document.addEventListener("visibilitychange", () => {
       if (wakeLock !== null && document.visibilityState === "visible") {
         requestWakeLock();
@@ -179,6 +182,39 @@
     });
 
     wakeLockBtn.onclick = toggleWakeLock;
+
+    // --- Picture-in-Picture setup ---
+    const pipCanvas = document.getElementById("pipCanvas");
+    const pipCtx = pipCanvas.getContext("2d");
+    const pipVideo = document.getElementById("pipVideo");
+    let pipStream = pipCanvas.captureStream();
+    pipVideo.srcObject = pipStream;
+
+    function drawPiPFrame(text) {
+      pipCtx.fillStyle = "black";
+      pipCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+      pipCtx.fillStyle = "white";
+      pipCtx.font = "bold 48px monospace";
+      pipCtx.textAlign = "center";
+      pipCtx.textBaseline = "middle";
+      pipCtx.fillText(text, pipCanvas.width / 2, pipCanvas.height / 2);
+    }
+    drawPiPFrame("00:00.000");
+
+    const pipBtn = document.getElementById("pipBtn");
+    pipBtn.onclick = async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await pipVideo.play();
+          await pipVideo.requestPictureInPicture();
+        }
+      } catch (err) {
+        console.error("PiP failed:", err);
+        alert("Picture-in-Picture failed: " + err.message);
+      }
+    };
   </script>
 </body>
 </html>
