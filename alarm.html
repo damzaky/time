@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Alarm</title>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        background: #111;
+        color: white;
+      }
+
+      .topbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 50px;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        border-bottom: 1px solid #333;
+        z-index: 5;
+      }
+
+      .container {
+        display: flex;
+        height: 100vh;
+        padding-top: 50px;
+        padding-bottom: 70px;
+        box-sizing: border-box;
+      }
+
+      .section {
+        flex: 1;
+        overflow: auto;
+        padding: 10px;
+      }
+
+      .hours {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        height: 100%;
+      }
+
+      .minutes {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 6px;
+        height: 100%;
+      }
+
+      label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #222;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 18px;
+        overflow: hidden;
+      }
+
+      label span {
+        width: 100%;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        font-size: 180%;
+      }
+
+      input {
+        display: none;
+      }
+
+      input:checked + span {
+        background: #0a84ff;
+      }
+
+      .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 70px;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        border-top: 1px solid #333;
+        box-sizing: border-box;
+      }
+
+      button {
+        font-size: 18px;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        background: #0a84ff;
+        color: white;
+        margin-right: 10px;
+        cursor: pointer
+      }
+
+      .countdown {
+        font-size: 22px;
+      }
+
+      .controls {
+        display: flex;
+      }
+
+      #stop {
+        display: none;
+      }
+
+      @media (max-width: 700px) {
+        .container {
+          flex-direction: column;
+        }
+
+        .section {
+          height: 50vh;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="topbar" id="clock">--:--:--</div>
+
+    <div class="container">
+      <div class="section">
+        <div class="hours" id="hours"></div>
+      </div>
+
+      <div class="section">
+        <div class="minutes" id="minutes"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="controls">
+        <button id="start" onclick="startAlarm()">Start</button>
+        <button id="stop" onclick="stopAlarm()">Stop</button>
+      </div>
+
+      <div class="countdown" id="countdown">--:--</div>
+    </div>
+
+    <script>
+      const hoursDiv = document.getElementById("hours");
+      const minutesDiv = document.getElementById("minutes");
+
+      const savedHour = localStorage.getItem("alarmHour");
+      const savedMinute = localStorage.getItem("alarmMinute");
+
+      const start = document.getElementById("start");
+      const stopb = document.getElementById("stop");
+
+      for (let i = 0; i < 24; i++) {
+        let v = i.toString().padStart(2, "0");
+
+        hoursDiv.innerHTML += `
+<label>
+<input type="radio" name="hour" value="${i}" ${savedHour == i ? "checked" : ""}>
+<span>${v}</span>
+</label>
+`;
+      }
+
+      for (let i = 0; i < 60; i++) {
+        let v = i.toString().padStart(2, "0");
+
+        minutesDiv.innerHTML += `
+<label>
+<input type="radio" name="minute" value="${i}" ${savedMinute == i ? "checked" : ""}>
+<span>${v}</span>
+</label>
+`;
+      }
+
+      document.addEventListener("change", (e) => {
+        if (e.target.name === "hour") {
+          localStorage.setItem("alarmHour", e.target.value);
+        }
+
+        if (e.target.name === "minute") {
+          localStorage.setItem("alarmMinute", e.target.value);
+        }
+      });
+
+      let alarmTime = null;
+      let timer = null;
+      let alarmAudio = null;
+
+      function startAlarm() {
+        let h = document.querySelector("input[name=hour]:checked");
+        let m = document.querySelector("input[name=minute]:checked");
+
+        if (!h || !m) {
+          alert("Select hour and minute");
+          return;
+        }
+
+        let now = new Date();
+        let target = new Date();
+
+        target.setHours(parseInt(h.value));
+        target.setMinutes(parseInt(m.value));
+        target.setSeconds(0);
+
+        if (target <= now) {
+          target.setDate(target.getDate() + 1);
+        }
+
+        alarmTime = target.getTime();
+
+        if (timer) clearInterval(timer);
+
+        alarmAudio = new Audio("./chordedalarm.wav");
+        alarmAudio.loop = true;
+
+        alarmAudio
+          .play()
+          .then(() => {
+            alarmAudio.pause();
+            alarmAudio.currentTime = 0;
+          })
+          .catch(() => {});
+
+        timer = setInterval(updateCountdown, 500);
+        start.style.display = "none"
+        stopb.style.display = "block"
+      }
+
+      function stopAlarm() {
+        start.style.display = "block"
+        stopb.style.display = "none"
+
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+
+        if (alarmAudio) {
+          alarmAudio.pause();
+          alarmAudio.currentTime = 0;
+        }
+
+        document.getElementById("countdown").textContent = "--:--";
+        document.title = "Alarm";
+      }
+
+      function updateCountdown() {
+        let now = Date.now();
+        let diff = alarmTime - now;
+
+        if (diff <= 0) {
+          document.getElementById("countdown").textContent = "ALARM";
+          document.title = "ALARM";
+
+          clearInterval(timer);
+
+          if (alarmAudio) {
+            alarmAudio.play();
+          }
+
+          return;
+        }
+
+        let totalSec = Math.floor(diff / 1000);
+
+        let h = Math.floor(totalSec / 3600);
+        let m = Math.floor((totalSec % 3600) / 60);
+        let s = totalSec % 60;
+
+        let txt =
+          String(h).padStart(2, "0") +
+          ":" +
+          String(m).padStart(2, "0") +
+          ":" +
+          String(s).padStart(2, "0");
+
+        document.getElementById("countdown").textContent = txt;
+        document.title = txt;
+      }
+
+      function updateClock() {
+        let now = new Date();
+
+        let h = String(now.getHours()).padStart(2, "0");
+        let m = String(now.getMinutes()).padStart(2, "0");
+        let s = String(now.getSeconds()).padStart(2, "0");
+
+        document.getElementById("clock").textContent = `${h}:${m}:${s}`;
+      }
+
+      setInterval(updateClock, 1000);
+      updateClock();
+    </script>
+  </body>
+</html>
