@@ -123,6 +123,10 @@
         display: none;
       }
 
+      .highlight {
+        box-shadow: inset 0 0 10px 10px #a10000;
+      }
+
       @media (max-width: 700px) {
         .container {
           flex-direction: column;
@@ -182,7 +186,7 @@
         hoursDiv.innerHTML += `
 <label>
 <input type="radio" name="hour" value="${i}" ${savedHour == i ? "checked" : ""}>
-<span>${v}</span>
+<span class='hour' id="hour${i}">${v}</span>
 </label>
 `;
       }
@@ -193,7 +197,7 @@
         minutesDiv.innerHTML += `
 <label>
 <input type="radio" name="minute" value="${i}" ${savedMinute == i ? "checked" : ""}>
-<span>${v}</span>
+<span class='minute' id="minute${i}">${v}</span>
 </label>
 `;
       }
@@ -311,6 +315,20 @@
         let m = String(now.getMinutes()).padStart(2, "0");
         let s = String(now.getSeconds()).padStart(2, "0");
 
+        [...document.getElementsByClassName('hour')].forEach(el => {
+          if (el.id === `hour${h}`) {
+            el.classList.add('highlight')
+          } else {
+            el.classList.remove('highlight')
+          }
+        });
+        [...document.getElementsByClassName('minute')].forEach(el => {
+          if (el.id === `minute${m}`) {
+            el.classList.add('highlight')
+          } else {
+            el.classList.remove('highlight')
+          }
+        });
         document.getElementById("clock").textContent = `${h}:${m}:${s}`;
       }
 
