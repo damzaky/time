@@ -311,19 +311,21 @@
       function updateClock() {
         let now = new Date();
 
-        let h = String(now.getHours()).padStart(2, "0");
-        let m = String(now.getMinutes()).padStart(2, "0");
+        const rawH = now.getHours()
+        const rawM = now.getMinutes()
+        let h = String(rawH).padStart(2, "0");
+        let m = String(rawM).padStart(2, "0");
         let s = String(now.getSeconds()).padStart(2, "0");
 
         [...document.getElementsByClassName('hour')].forEach(el => {
-          if (el.id === `hour${h}`) {
+          if (el.id === `hour${rawH}`) {
             el.classList.add('highlight')
           } else {
             el.classList.remove('highlight')
           }
         });
         [...document.getElementsByClassName('minute')].forEach(el => {
-          if (el.id === `minute${m}`) {
+          if (el.id === `minute${rawM}`) {
             el.classList.add('highlight')
           } else {
             el.classList.remove('highlight')
