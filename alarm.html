@@ -108,7 +108,7 @@
         background: #0a84ff;
         color: white;
         margin-right: 10px;
-        cursor: pointer
+        cursor: pointer;
       }
 
       .countdown {
@@ -135,6 +135,10 @@
         .section {
           height: 50vh;
         }
+      }
+
+      #volume {
+        display: block;
       }
     </style>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-MHQZ4X0HZQ"></script>
@@ -166,7 +170,9 @@
         <button id="start" onclick="startAlarm()">Start</button>
         <button id="stop" onclick="stopAlarm()">Stop</button>
       </div>
-
+      <div>
+        <input id="volume" type="range" min="0" max="1" step="0.01" />
+      </div>
       <div class="countdown" id="countdown">--:--</div>
     </div>
 
@@ -179,6 +185,13 @@
 
       const start = document.getElementById("start");
       const stopb = document.getElementById("stop");
+
+      const volumeSlider = document.getElementById("volume");
+
+      let savedVolume = localStorage.getItem("alarmVolume");
+      if (savedVolume === null) savedVolume = 1;
+
+      volumeSlider.value = savedVolume;
 
       for (let i = 0; i < 24; i++) {
         let v = i.toString().padStart(2, "0");
@@ -216,6 +229,14 @@
       let timer = null;
       let alarmAudio = null;
 
+      volumeSlider.addEventListener("input", () => {
+        localStorage.setItem("alarmVolume", volumeSlider.value);
+
+        if (alarmAudio) {
+          alarmAudio.volume = volumeSlider.value;
+        }
+      });
+
       function startAlarm() {
         let h = document.querySelector("input[name=hour]:checked");
         let m = document.querySelector("input[name=minute]:checked");
@@ -243,6 +264,8 @@
         alarmAudio = new Audio("./chordedalarm.wav");
         alarmAudio.loop = true;
 
+        alarmAudio.volume = volumeSlider.value;
+
         alarmAudio
           .play()
           .then(() => {
@@ -252,13 +275,13 @@
           .catch(() => {});
 
         timer = setInterval(updateCountdown, 500);
-        start.style.display = "none"
-        stopb.style.display = "block"
+        start.style.display = "none";
+        stopb.style.display = "block";
       }
 
       function stopAlarm() {
-        start.style.display = "block"
-        stopb.style.display = "none"
+        start.style.display = "block";
+        stopb.style.display = "none";
 
         if (timer) {
           clearInterval(timer);
@@ -311,24 +334,24 @@
       function updateClock() {
         let now = new Date();
 
-        const rawH = now.getHours()
-        const rawM = now.getMinutes()
+        const rawH = now.getHours();
+        const rawM = now.getMinutes();
         let h = String(rawH).padStart(2, "0");
         let m = String(rawM).padStart(2, "0");
         let s = String(now.getSeconds()).padStart(2, "0");
 
-        [...document.getElementsByClassName('hour')].forEach(el => {
+        [...document.getElementsByClassName("hour")].forEach((el) => {
           if (el.id === `hour${rawH}`) {
-            el.classList.add('highlight')
+            el.classList.add("highlight");
           } else {
-            el.classList.remove('highlight')
+            el.classList.remove("highlight");
           }
         });
-        [...document.getElementsByClassName('minute')].forEach(el => {
+        [...document.getElementsByClassName("minute")].forEach((el) => {
           if (el.id === `minute${rawM}`) {
-            el.classList.add('highlight')
+            el.classList.add("highlight");
           } else {
-            el.classList.remove('highlight')
+            el.classList.remove("highlight");
           }
         });
         document.getElementById("clock").textContent = `${h}:${m}:${s}`;
